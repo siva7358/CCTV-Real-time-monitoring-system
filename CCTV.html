@@ -1,7 +1,9 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CCTV Camera Status - Real-Time Monitoring</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
@@ -19,11 +21,14 @@
             overflow: hidden;
         }
 
+        /* ============================================================
+           TOP HUD BAR
+           ============================================================ */
         .hud-bar {
             background: rgba(15, 26, 46, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            padding: 10px 28px;
+            padding: 8px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -31,30 +36,30 @@
             z-index: 1000;
             position: relative;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
         }
 
         .hud-left {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
         }
 
         .hud-icon {
-            width: 38px;
-            height: 38px;
+            width: 34px;
+            height: 34px;
             background: linear-gradient(135deg, #00d4ff, #00ff88);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
         }
 
         .hud-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             background: linear-gradient(135deg, #00d4ff, #00ff88);
             -webkit-background-clip: text;
@@ -63,7 +68,7 @@
         }
 
         .hud-title-sub {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 400;
             color: #5a7a9a;
             -webkit-text-fill-color: #5a7a9a;
@@ -73,7 +78,7 @@
 
         .hud-stats {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -81,38 +86,37 @@
         .hud-stat {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 5px 14px;
-            border-radius: 10px;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.06);
             transition: all 0.3s ease;
-            cursor: default;
+            cursor: pointer;
             position: relative;
             overflow: hidden;
         }
 
-        .hud-stat::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent);
-            pointer-events: none;
+        .hud-stat:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 212, 255, 0.2);
+        }
+
+        .hud-stat.active {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00d4ff;
         }
 
         .hud-stat .label {
             color: #7a9ab5;
             font-weight: 400;
-            font-size: 11px;
+            font-size: 10px;
             letter-spacing: 0.3px;
         }
 
         .hud-stat .value {
             font-weight: 700;
-            font-size: 15px;
+            font-size: 14px;
             font-variant-numeric: tabular-nums;
         }
 
@@ -128,10 +132,14 @@
             color: #ff4466;
             text-shadow: 0 0 20px rgba(255, 68, 102, 0.2);
         }
+        .hud-stat .value.partial {
+            color: #ffaa00;
+            text-shadow: 0 0 20px rgba(255, 170, 0, 0.2);
+        }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             display: inline-block;
             position: relative;
@@ -145,50 +153,57 @@
             background: #ff4466;
             box-shadow: 0 0 12px rgba(255, 68, 102, 0.4);
         }
+        .status-dot.partial {
+            background: #ffaa00;
+            box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+        }
 
-        .status-dot.online::after {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            right: -4px;
-            bottom: -4px;
+        /* Last Update Time */
+        .update-time {
+            font-size: 10px;
+            color: #4a6a8a;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: nowrap;
+        }
+
+        .update-time .live-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #00ff88;
             border-radius: 50%;
-            border: 2px solid rgba(0, 255, 136, 0.15);
-            animation: pulse-ring 2s ease-in-out infinite;
+            margin-right: 6px;
+            animation: pulse-live 1.5s ease-in-out infinite;
         }
 
-        .status-dot.offline::after {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            right: -4px;
-            bottom: -4px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 68, 102, 0.15);
-            animation: pulse-ring 2s ease-in-out infinite;
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
         }
 
-        @keyframes pulse-ring {
-            0%, 100% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.8); opacity: 0; }
-        }
-
+        /* ============================================================
+           MAIN LAYOUT
+           ============================================================ */
         .main-container {
             display: flex;
-            height: calc(100vh - 70px);
+            height: calc(100vh - 66px);
         }
 
+        /* ============================================================
+           LEFT PANEL
+           ============================================================ */
         .device-panel {
-            width: 400px;
-            min-width: 400px;
+            width: 420px;
+            min-width: 420px;
             background: rgba(12, 22, 40, 0.92);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-right: 1px solid rgba(255, 255, 255, 0.04);
             overflow-y: auto;
-            padding: 14px 14px;
+            padding: 12px 14px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
@@ -205,14 +220,16 @@
             border-radius: 4px;
         }
 
+        /* Search Section */
         .search-section {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
-            padding-bottom: 14px;
+            padding-bottom: 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             flex-shrink: 0;
+            flex-wrap: wrap;
         }
 
         .search-wrapper {
@@ -220,24 +237,25 @@
             position: relative;
             display: flex;
             align-items: center;
+            min-width: 120px;
         }
 
         .search-wrapper .search-icon {
             position: absolute;
-            left: 14px;
+            left: 12px;
             color: #4a6a8a;
-            font-size: 14px;
+            font-size: 13px;
             pointer-events: none;
         }
 
         .search-wrapper input {
             width: 100%;
-            padding: 10px 16px 10px 42px;
-            border-radius: 12px;
+            padding: 8px 14px 8px 36px;
+            border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.06);
             background: rgba(255, 255, 255, 0.04);
             color: #e8edf5;
-            font-size: 13px;
+            font-size: 12px;
             font-family: 'Inter', sans-serif;
             outline: none;
             transition: all 0.3s ease;
@@ -254,45 +272,84 @@
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.04);
         }
 
-        .search-shortcut {
-            font-size: 10px;
-            color: #4a6a8a;
-            background: rgba(255, 255, 255, 0.04);
-            padding: 2px 10px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            font-weight: 500;
-            letter-spacing: 0.5px;
+        /* Filter Buttons */
+        .filter-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
         }
 
+        .filter-btn {
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+            color: #6a8aaa;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-btn.active {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        .filter-btn .badge {
+            font-size: 9px;
+            opacity: 0.6;
+            margin-left: 3px;
+        }
+
+        .filter-btn .badge.online-badge {
+            color: #00ff88;
+        }
+        .filter-btn .badge.offline-badge {
+            color: #ff4466;
+        }
+        .filter-btn .badge.partial-badge {
+            color: #ffaa00;
+        }
+
+        /* Panel Header */
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 4px 12px 4px;
+            padding: 4px 4px 8px 4px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             flex-shrink: 0;
         }
 
         .panel-header .title {
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             color: #4a6a8a;
             font-weight: 600;
         }
 
         .panel-header .count {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: #00d4ff;
             background: rgba(0, 212, 255, 0.08);
-            padding: 2px 14px;
-            border-radius: 20px;
+            padding: 2px 12px;
+            border-radius: 16px;
             border: 1px solid rgba(0, 212, 255, 0.08);
         }
 
+        /* Device List */
         .device-list-container {
             flex: 1;
             overflow-y: auto;
@@ -311,9 +368,9 @@
         }
 
         .device-item {
-            padding: 10px 14px;
-            margin-bottom: 6px;
-            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            border-radius: 10px;
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.03);
             cursor: pointer;
@@ -336,7 +393,7 @@
         .device-item:hover {
             background: rgba(255, 255, 255, 0.04);
             border-color: rgba(255, 255, 255, 0.06);
-            transform: translateX(4px);
+            transform: translateX(3px);
         }
 
         .device-item:hover::before {
@@ -346,7 +403,7 @@
         .device-item .info {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
         }
 
         .device-item .top-row {
@@ -357,23 +414,23 @@
 
         .device-item .jb-name {
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             color: #e8edf5;
             letter-spacing: 0.2px;
         }
 
         .device-item .camera-count {
-            font-size: 10px;
+            font-size: 9px;
             color: #4a6a8a;
             background: rgba(255, 255, 255, 0.04);
-            padding: 1px 10px;
-            border-radius: 20px;
+            padding: 1px 8px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.04);
             font-weight: 500;
         }
 
         .device-item .location-name {
-            font-size: 12px;
+            font-size: 11px;
             color: #6a8aaa;
             max-width: 240px;
             white-space: nowrap;
@@ -384,15 +441,15 @@
         .device-item .ip-status-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 4px;
+            gap: 3px;
+            margin-top: 3px;
         }
 
         .ip-pill {
-            font-size: 10px;
+            font-size: 9px;
             font-family: 'Inter', 'Consolas', monospace;
-            padding: 2px 10px;
-            border-radius: 20px;
+            padding: 1px 8px;
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.04);
             color: #5a7a9a;
@@ -428,13 +485,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .device-item .status-badge {
-            font-size: 9px;
-            padding: 2px 12px;
-            border-radius: 20px;
+            font-size: 8px;
+            padding: 1px 10px;
+            border-radius: 12px;
             font-weight: 600;
             white-space: nowrap;
             letter-spacing: 0.5px;
@@ -466,6 +523,12 @@
             animation: pulse-ping 0.8s ease-in-out infinite;
         }
 
+        .device-item .uptime {
+            font-size: 8px;
+            color: #4a6a8a;
+        }
+
+        /* Loading State */
         .loading-text {
             color: #4a6a8a;
             text-align: center;
@@ -496,6 +559,9 @@
             font-size: 13px;
         }
 
+        /* ============================================================
+           MAP
+           ============================================================ */
         #map {
             flex: 1;
             height: 100%;
@@ -503,7 +569,7 @@
         }
 
         /* ============================================================
-           MARKER WITH LABEL - JB Number on Map
+           MARKER WITH LABEL
            ============================================================ */
         .jb-marker {
             position: relative;
@@ -519,8 +585,8 @@
         }
 
         .jb-marker .marker-dot {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             border: 2px solid #fff;
@@ -551,13 +617,13 @@
         }
 
         .jb-marker .marker-label {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 600;
             color: #e8edf5;
             text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.6);
             background: rgba(0, 0, 0, 0.5);
-            padding: 1px 6px;
-            border-radius: 4px;
+            padding: 1px 5px;
+            border-radius: 3px;
             white-space: nowrap;
             font-family: 'Inter', sans-serif;
             letter-spacing: 0.3px;
@@ -566,28 +632,9 @@
             margin-top: 2px;
         }
 
-        .jb-marker .marker-label.online {
-            border-color: rgba(0, 204, 119, 0.2);
-        }
-
-        .jb-marker .marker-label.offline {
-            border-color: rgba(221, 51, 85, 0.2);
-        }
-
-        .jb-marker .marker-label.partial {
-            border-color: rgba(255, 170, 0, 0.2);
-        }
-
-        .jb-marker .marker-label.pinging {
-            border-color: rgba(255, 170, 0, 0.2);
-            animation: pulse-label 0.8s ease-in-out infinite;
-        }
-
-        @keyframes pulse-label {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
+        /* ============================================================
+           POPUP
+           ============================================================ */
         .google-popup .leaflet-popup-content-wrapper {
             background: #191d3e;
             border-radius: 12px;
@@ -603,30 +650,30 @@
         }
 
         .popup-content {
-            padding: 14px 16px;
+            padding: 12px 14px;
             min-width: 200px;
         }
 
         .popup-content .popup-jb {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 15px;
             color: #00d4ff;
         }
 
         .popup-content .popup-location {
-            font-size: 12px;
+            font-size: 11px;
             color: #8899bb;
-            margin: 4px 0 8px 0;
+            margin: 4px 0 6px 0;
         }
 
         .popup-content .popup-ip-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 4px 8px;
+            padding: 3px 6px;
             margin: 2px 0;
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius: 4px;
+            font-size: 11px;
             font-family: 'Inter', 'Consolas', monospace;
             background: rgba(255, 255, 255, 0.04);
         }
@@ -637,10 +684,10 @@
         }
 
         .popup-content .popup-ip-item .ip-status {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
-            padding: 1px 10px;
-            border-radius: 20px;
+            padding: 1px 8px;
+            border-radius: 12px;
         }
 
         .popup-content .popup-ip-item .ip-status.online {
@@ -661,13 +708,13 @@
 
         .popup-content .popup-divider {
             border-top: 1px solid rgba(255, 255, 255, 0.06);
-            margin: 6px 0;
+            margin: 4px 0;
         }
 
         .popup-content .popup-status-text {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
         .popup-content .popup-status-text.online {
@@ -684,12 +731,9 @@
             animation: pulse-ping 0.8s ease-in-out infinite;
         }
 
-        .leaflet-marker-icon {
-            cursor: pointer !important;
-            background: transparent !important;
-            border: none !important;
-        }
-
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
         @media (max-width: 1024px) {
             .device-panel {
                 width: 340px;
@@ -703,28 +747,24 @@
                 min-width: 280px;
             }
             .hud-stats {
-                gap: 6px;
+                gap: 4px;
             }
             .hud-stat {
-                padding: 4px 10px;
-                font-size: 10px;
+                padding: 3px 8px;
+                font-size: 9px;
             }
             .hud-stat .value {
-                font-size: 13px;
+                font-size: 12px;
             }
             .hud-title {
-                font-size: 15px;
+                font-size: 14px;
             }
             .device-item .location-name {
-                max-width: 140px;
+                max-width: 120px;
             }
-            .jb-marker .marker-label {
-                font-size: 7px;
-                padding: 1px 4px;
-            }
-            .jb-marker .marker-dot {
-                width: 12px;
-                height: 12px;
+            .update-time {
+                font-size: 8px;
+                padding: 2px 6px;
             }
         }
 
@@ -738,16 +778,16 @@
             }
             .main-container {
                 flex-direction: column;
-                height: calc(100vh - 70px);
+                height: calc(100vh - 66px);
             }
             #map {
                 height: 55vh;
             }
             .hud-bar {
-                padding: 8px 16px;
+                padding: 6px 12px;
             }
             .hud-stats {
-                gap: 4px;
+                gap: 3px;
                 justify-content: center;
                 width: 100%;
             }
@@ -756,14 +796,19 @@
                 justify-content: center;
             }
             .hud-title {
-                font-size: 14px;
+                font-size: 13px;
             }
             .search-wrapper input {
-                font-size: 12px;
-                padding: 8px 14px 8px 38px;
+                font-size: 11px;
+                padding: 6px 12px 6px 32px;
             }
-            .search-shortcut {
-                display: none;
+            .filter-btn {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            .update-time {
+                font-size: 8px;
+                padding: 2px 6px;
             }
             .jb-marker .marker-label {
                 font-size: 6px;
@@ -774,10 +819,19 @@
                 height: 10px;
             }
         }
+
+        .leaflet-marker-icon {
+            cursor: pointer !important;
+            background: transparent !important;
+            border: none !important;
+        }
     </style>
 </head>
 <body>
 
+    <!-- ============================================================
+    TOP HUD BAR
+    ============================================================ -->
     <div class="hud-bar">
         <div class="hud-left">
             <div class="hud-icon">🛡️</div>
@@ -787,43 +841,71 @@
             </div>
         </div>
         <div class="hud-stats">
-            <div class="hud-stat">
+            <div class="hud-stat active" data-filter="all" id="filterAllTop">
                 <span class="label">Total JB</span>
                 <span class="value total" id="totalJB">0</span>
             </div>
-            <div class="hud-stat">
-                <span class="label">Total Cam</span>
-                <span class="value total" id="totalCam">0</span>
-            </div>
-            <div class="hud-stat">
+            <div class="hud-stat" data-filter="online" id="filterOnlineTop">
                 <span class="status-dot online"></span>
                 <span class="label">Online</span>
                 <span class="value online" id="onlineCount">0</span>
             </div>
-            <div class="hud-stat">
+            <div class="hud-stat" data-filter="partial" id="filterPartialTop">
+                <span class="status-dot partial"></span>
+                <span class="label">Partial</span>
+                <span class="value partial" id="partialCount">0</span>
+            </div>
+            <div class="hud-stat" data-filter="offline" id="filterOfflineTop">
                 <span class="status-dot offline"></span>
                 <span class="label">Offline</span>
                 <span class="value offline" id="offlineCount">0</span>
             </div>
+            <div class="hud-stat" style="cursor:default;border-color:rgba(0,212,255,0.2);">
+                <span class="label">Total Cam</span>
+                <span class="value total" id="totalCam">0</span>
+            </div>
+            <div class="update-time">
+                <span class="live-dot"></span>
+                <span id="lastUpdate">Waiting for data...</span>
+            </div>
         </div>
     </div>
 
+    <!-- ============================================================
+    MAIN LAYOUT
+    ============================================================ -->
     <div class="main-container">
 
+        <!-- LEFT PANEL -->
         <div class="device-panel" id="devicePanel">
+
+            <!-- Search & Filters -->
             <div class="search-section">
                 <div class="search-wrapper">
-                    <span class="search-icon"></span>
+                    <span class="search-icon">🔍</span>
                     <input type="text" id="searchInput" placeholder="Search JB, IP, or Location..." />
                 </div>
-                <span class="search-shortcut"></span>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all" id="filterAll">All</button>
+                    <button class="filter-btn" data-filter="online" id="filterOnline">
+                        Online <span class="badge online-badge" id="onlineBadge">0</span>
+                    </button>
+                    <button class="filter-btn" data-filter="partial" id="filterPartial">
+                        Partial <span class="badge partial-badge" id="partialBadge">0</span>
+                    </button>
+                    <button class="filter-btn" data-filter="offline" id="filterOffline">
+                        Offline <span class="badge offline-badge" id="offlineBadge">0</span>
+                    </button>
+                </div>
             </div>
 
+            <!-- Panel Header -->
             <div class="panel-header">
-                <span class="title"> JB-Count</span>
+                <span class="title">📋 JB-Count</span>
                 <span class="count" id="deviceCount">0</span>
             </div>
 
+            <!-- Device List -->
             <div class="device-list-container">
                 <div id="deviceList">
                     <div class="loading-text">
@@ -833,9 +915,11 @@
             </div>
         </div>
 
+        <!-- MAP -->
         <div id="map"></div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
 
@@ -1950,7 +2034,11 @@
         document.getElementById('totalJB').textContent = totalDevices;
         document.getElementById('totalCam').textContent = totalCameras;
         document.getElementById('onlineCount').textContent = 0;
+        document.getElementById('partialCount').textContent = 0;
         document.getElementById('offlineCount').textContent = 0;
+        document.getElementById('onlineBadge').textContent = 0;
+        document.getElementById('partialBadge').textContent = 0;
+        document.getElementById('offlineBadge').textContent = 0;
         document.getElementById('deviceCount').textContent = totalDevices;
 
         // ============================================================
@@ -2003,7 +2091,6 @@
                 statusClass = 'pinging';
             }
 
-            // Create a custom div with marker dot and label
             const div = document.createElement('div');
             div.className = `jb-marker`;
             div.innerHTML = `
@@ -2075,16 +2162,23 @@
                 else offlineTotal++;
             }
 
+            let onlineDevices = 0;
+            let offlineDevices = 0;
+            let partialDevices = 0;
+
             for (const device of devices) {
                 const onlineCount = device.ipStatuses.filter(i => i.status === 'online').length;
                 device.onlineCount = onlineCount;
                 device.overallStatus = onlineCount === device.totalCount ? 'online' :
                     onlineCount > 0 ? 'partial' : 'offline';
 
+                if (device.overallStatus === 'online') onlineDevices++;
+                else if (device.overallStatus === 'offline') offlineDevices++;
+                else if (device.overallStatus === 'partial') partialDevices++;
+
                 // Update marker
                 const marker = markers.find(m => m.deviceData.jb === device.jb);
                 if (marker) {
-                    // Update marker icon with new status
                     const newIcon = createLabeledMarker(device.overallStatus, device.jb);
                     marker.setIcon(L.divIcon({
                         html: newIcon.outerHTML,
@@ -2117,8 +2211,18 @@
                 }
             }
 
+            // Update HUD
             document.getElementById('onlineCount').textContent = onlineTotal;
             document.getElementById('offlineCount').textContent = offlineTotal;
+            document.getElementById('partialCount').textContent = totalCameras - onlineTotal - offlineTotal;
+            document.getElementById('onlineBadge').textContent = onlineDevices;
+            document.getElementById('partialBadge').textContent = partialDevices;
+            document.getElementById('offlineBadge').textContent = offlineDevices;
+
+            // Update last update time
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('lastUpdate').textContent = `Last update: ${timeStr}`;
 
             renderDeviceList();
 
@@ -2130,9 +2234,19 @@
         // ============================================================
 
         let currentSearch = '';
+        let currentFilter = 'all';
 
         function getFilteredDevices() {
             let filtered = devices;
+
+            if (currentFilter === 'online') {
+                filtered = filtered.filter(d => d.overallStatus === 'online');
+            } else if (currentFilter === 'offline') {
+                filtered = filtered.filter(d => d.overallStatus === 'offline');
+            } else if (currentFilter === 'partial') {
+                filtered = filtered.filter(d => d.overallStatus === 'partial');
+            }
+
             if (currentSearch.trim() !== '') {
                 const query = currentSearch.toLowerCase().trim();
                 filtered = filtered.filter(d =>
@@ -2151,7 +2265,7 @@
             document.getElementById('deviceCount').textContent = filtered.length;
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="no-results">No devices found matching your search.</div>`;
+                container.innerHTML = `<div class="no-results">No devices found matching your criteria.</div>`;
                 return;
             }
 
@@ -2217,7 +2331,6 @@
         // ============================================================
 
         devices.forEach(device => {
-            // Create custom marker with JB label
             const markerElement = createLabeledMarker('pinging', device.jb);
 
             const icon = L.divIcon({
@@ -2234,7 +2347,6 @@
                 riseOnHover: true
             }).addTo(map);
 
-            // Build initial popup content
             let ipsHtml = device.ipStatuses.map(ipInfo =>
                 `<div class="popup-ip-item">
                     <span class="ip-addr">${ipInfo.ip}</span>
@@ -2270,14 +2382,70 @@
         });
 
         // ============================================================
-        // SEARCH INPUT
+        // FILTER & SEARCH HANDLERS
         // ============================================================
 
+        // Top bar filter clicks
+        document.getElementById('filterAllTop').addEventListener('click', function() {
+            setFilter('all');
+        });
+
+        document.getElementById('filterOnlineTop').addEventListener('click', function() {
+            setFilter('online');
+        });
+
+        document.getElementById('filterPartialTop').addEventListener('click', function() {
+            setFilter('partial');
+        });
+
+        document.getElementById('filterOfflineTop').addEventListener('click', function() {
+            setFilter('offline');
+        });
+
+        // Panel filter buttons
+        document.getElementById('filterAll').addEventListener('click', function() {
+            setFilter('all');
+        });
+
+        document.getElementById('filterOnline').addEventListener('click', function() {
+            setFilter('online');
+        });
+
+        document.getElementById('filterPartial').addEventListener('click', function() {
+            setFilter('partial');
+        });
+
+        document.getElementById('filterOffline').addEventListener('click', function() {
+            setFilter('offline');
+        });
+
+        function setFilter(filter) {
+            currentFilter = filter;
+
+            // Update top bar active states
+            document.querySelectorAll('.hud-stat').forEach(el => el.classList.remove('active'));
+            if (filter === 'all') document.getElementById('filterAllTop').classList.add('active');
+            else if (filter === 'online') document.getElementById('filterOnlineTop').classList.add('active');
+            else if (filter === 'partial') document.getElementById('filterPartialTop').classList.add('active');
+            else if (filter === 'offline') document.getElementById('filterOfflineTop').classList.add('active');
+
+            // Update panel filter buttons
+            document.querySelectorAll('.filter-btn').forEach(el => el.classList.remove('active'));
+            if (filter === 'all') document.getElementById('filterAll').classList.add('active');
+            else if (filter === 'online') document.getElementById('filterOnline').classList.add('active');
+            else if (filter === 'partial') document.getElementById('filterPartial').classList.add('active');
+            else if (filter === 'offline') document.getElementById('filterOffline').classList.add('active');
+
+            renderDeviceList();
+        }
+
+        // Search input
         document.getElementById('searchInput').addEventListener('input', function() {
             currentSearch = this.value;
             renderDeviceList();
         });
 
+        // Keyboard shortcut - ⌘K or Ctrl+K to focus search
         document.addEventListener('keydown', function(e) {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
@@ -2301,11 +2469,11 @@
             map.invalidateSize();
         });
 
-        console.log(`✅ Puducherry Cyber Camera Control Room loaded`);
+        console.log(`✅ CCTV Camera Status System Loaded`);
         console.log(`📍 ${totalDevices} JB locations`);
         console.log(`📹 ${totalCameras} total cameras`);
         console.log(`🔄 Pinging ALL ${totalCameras} IPs simultaneously every 5 seconds...`);
-        console.log(`📍 Each map marker shows JB number label`);
+        console.log(`📍 Click any map marker to view camera details`);
     </script>
 
 </body>
