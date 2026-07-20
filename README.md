@@ -13,7 +13,7 @@ A real-time CCTV camera monitoring dashboard with IP ping status tracking.
 
 ## Live Demo
 
-[Your GitHub Pages URL will go here]
+https://siva7358.github.io/CCTV-Real-time-monitoring-system/
 
 ## Technologies Used
 
